@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO ULTRA v49 — Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="\n  // FIX: fallback CDN if unpkg is unavailable\n  var s=document.createElement('script');\n  s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';\n  s.onerror=function(){\n    // Both CDNs failed — mark multiplayer as unavailable\n    window._peerJSUnavailable=true;\n    console.warn('[UNO] PeerJS failed to load from both CDNs. Multiplayer unavailable.');\n  };\n  document.head.appendChild(s);\n"></script>
+<style>
+[INJECT_CSS_FROM_SOURCE]
+</style>
+</head>
+<body>
+<!-- Modal Pentathlon Multiversus -->
+<div id="pentathlon-modal" class="t-hud-hidden">
+	<div class="pentathlon-modal-content">
+		<span class="pentathlon-modal-title">🏆 Pentathlon Multiversus</span>
+		<div class="pentathlon-modal-desc">Vinci una partita a UNO, Scopa, Burraco, Poker e Mille Miglia per ottenere il trofeo finale e crediti extra!</div>
+		<button onclick="confirmPentathlon()" class="pentathlon-modal-btn">Inizia Pentathlon</button>
+		<button onclick="closePentathlonModal()" class="pentathlon-modal-cancel">Annulla</button>
+	</div>
+</div>
+<!-- Ultra Watch Spectator & Betting HUD -->
+<div id="ultra-watch-hud" class="t-hud-hidden">
+	<div class="uw-hud-content">
+		<span class="uw-hud-title">Spectator Mode - Tavolo Finale</span>
+		<div class="uw-hud-bets">
+			<span>Scommetti su:</span>
+			<select id="uw-bet-select"></select>
+			<button onclick="placeUltraBet()" class="uw-bet-btn">Scommetti 50</button>
+		</div>
+		<span id="uw-hud-timer">00:00</span>
+		<span id="uw-hud-status"></span>
+	</div>
+</div>
+<!-- Nemesi Widget -->
+<div id="nemesi-hud" class="t-hud-hidden">
+	<div class="nemesi-content">
+		<span class="nemesi-title">Nemesi in Coda!</span>
+		<span id="nemesi-name"></span>
+	</div>
+</div>
+<!-- News & Patch Notes Feed -->
+<div id="news-feed" class="news-feed-bar"></div>
+<!-- Tournament Hub HUD -->
+<div id="tournament-lobby-hud" class="t-hud-hidden">
+	<div class="t-hud-content">
+		<div class="t-hud-info">
+			<span id="t-hud-name">TORNEO</span>
+			<span id="t-hud-timer">00:00</span>
+		</div>
+		<div class="t-hud-players">
+			<div class="t-hud-bar"><div id="t-hud-progress"></div></div>
+			<span id="t-hud-count">0/0</span>
+		</div>
+		<button onclick="cancelTournamentEntry()" class="t-hud-cancel">ANNULLA</button>
+	</div>
+</div>
+<!-- Tournament Accept Modal -->
+<div id="tournament-accept-modal" class="t-hud-hidden">
+	<div class="t-accept-content">
+		<span class="t-accept-title">TORNEO PRONTO!</span>
+		<button onclick="acceptTournamentEntry()" class="t-accept-btn">ACCETTA</button>
+		<span id="t-accept-timer">10</span>
+	</div>
+</div>
+<a href="#game" class="skip-link">Salta alla partita</a>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="notif" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="msg" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ═══ CLUB MODAL ═══ -->
+<div class="club-modal-overlay" id="club-modal-overlay">
+	<div class="club-modal" id="club-modal-box">
+		<div class="club-modal-title" id="club-modal-title">Crea Club</div>
+		<div class="club-modal-sub" id="club-modal-sub">Fondare il tuo club e raduna i tuoi alleati</div>
+		<div id="club-modal-body">
+			<label>Nome Club</label>
+			<input id="club-input-name" aria-label="Nome del club" placeholder="es. UNO Aces" maxlength="24">
+			<label>TAG (3-4 lettere)</label>
+			<input id="club-input-tag" aria-label="Tag del club (4 caratteri)" placeholder="ACE" maxlength="4" style="text-transform:uppercase">
+		</div>
+		<div class="club-modal-btns">
+			<button class="club-modal-cancel" onclick="clubCloseModal()">Annulla</button>
+			<button class="club-modal-confirm" id="club-modal-confirm-btn" onclick="clubModalConfirm()">Crea</button>
+		</div>
+	</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+		 LOADING SCREEN
+════════════════════════════════════════════════════ -->
+<div class="scr on" id="loading">
+	<div class="loading-logo">UNO</div>
+	<!-- FIX A11Y #7: spinner con role=status + loading-status con aria-live -->
+	<div class="loading-spinner" role="status" aria-label="Caricamento in corso…"></div>
+	<div class="loading-status" id="loading-status" aria-live="polite" aria-atomic="true">Connessione al cloud…</div>
+	<div class="loading-sub" id="loading-sub">UNO Ultra • Persistence Edition</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+		 LOGIN SCREEN
+════════════════════════════════════════════════════ -->
+<div class="scr" id="login" role="region" aria-label="Accesso account">
+	<div class="login-ambient"></div>
+	<div class="login-glass">
+
+		<div class="login-logo">UNO</div>
+		<div class="login-tagline">Ultra Edition</div>
+
+		<!-- Accedi / Registrati toggle -->
+		<div class="login-mode-toggle">
+			<button class="lmt-btn active" id="lmt-login" onclick="setLoginMode('login')">🔑 Accedi</button>
+			<button class="lmt-btn" id="lmt-register" onclick="setLoginMode('register')">✨ Registrati</button>
+		</div>
+
+		<div class="login-input-group">
+			<label class="login-field-label" for="li-username">Username</label>
+			<input class="login-input" id="li-username" type="text"
+				placeholder="es. remilk13" maxlength="15" autocomplete="username"
+				aria-label="Nome utente" aria-describedby="login-status"
+				oninput="onLoginFieldChange()" onkeydown="loginKeydown(event)">
+
+			<label class="login-field-label" for="li-pin">PIN (4–6 cifre)</label>
+			<input class="login-input" id="li-pin" type="password" inputmode="numeric"
+				placeholder="••••" maxlength="6" autocomplete="current-password"
+				aria-label="PIN da 4 a 6 cifre" aria-describedby="login-status"
+				oninput="onPinInput(this.value)" onkeydown="loginKeydown(event)">
+			<!-- FIX A11Y #5: pin-dots decorativi — nascosti agli AT -->
+			<div class="pin-dots" id="pin-dots" aria-hidden="true">
+				<div class="pin-dot" id="pd-0"></div>
+				<div class="pin-dot" id="pd-1"></div>
+				<div class="pin-dot" id="pd-2"></div>
+				<div class="pin-dot" id="pd-3"></div>
+				<div class="pin-dot" id="pd-4"></div>
+				<div class="pin-dot" id="pd-5"></div>
+			</div>
+			<!-- Announcer testuale per lo screen reader -->
+			<div id="pin-sr-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+			<!-- PIN confirm (register only) -->
+			<div id="pin-confirm-wrap" style="display:none;flex-direction:column;gap:6px">
+				<label class="login-field-label" for="li-pin-confirm">Conferma PIN</label>
+				<input class="login-input" id="li-pin-confirm" type="password" inputmode="numeric"
+					placeholder="Ripeti PIN" maxlength="6"
+					aria-label="Conferma PIN"
+					oninput="onLoginFieldChange()" onkeydown="loginKeydown(event)">
+			</div>
+		</div>
+
+		<div class="login-divider"></div>
+		<div class="login-status info" id="login-status" role="status" aria-live="polite" aria-atomic="true">Inserisci le tue credenziali</div>
+
+		<button class="btn-login" id="btn-login-confirm" onclick="submitLogin()" disabled>
+			🔑 Accedi
+		</button>
+
+		<div class="login-cloud-badge">
+			<div class="login-cloud-dot"></div>
+			Cloud Storage Attivo
+		</div>
+	</div>
+</div>
+
+<!-- LOGOUT CONFIRM -->
+<div class="overlay" id="ov-logout" role="dialog" aria-modal="true" aria-labelledby="ov-logout-title" aria-describedby="ov-logout-desc">
+	<div class="logout-panel">
+		<div class="logout-title" id="ov-logout-title">Disconnetti Account</div>
+		<div class="logout-sub" id="ov-logout-desc">Sei sicuro di voler uscire dall'account</div>
+		<div class="logout-user" id="logout-username-display">@username</div>
+		<div class="logout-sub" style="font-size:11px">I tuoi progressi rimangono salvati nel cloud.</div>
+		<button class="pbtn pb-quit" onclick="confirmLogout()" style="margin-top:4px">&#x2715; Disconnetti</button>
+		<button class="pbtn pb-resume" onclick="hideOv('ov-logout')">&#x2190; Annulla</button>
+	</div>
+</div>
+
+<!-- NVDA STEP 1: ASK -->
+<div class="overlay" id="ov-nvda-ask" role="dialog" aria-modal="true" aria-labelledby="nvda-ask-title" aria-describedby="nvda-ask-desc">
+	<div class="nvda-panel">
+		<div class="nvda-icon" aria-hidden="true">&#9855;</div>
+		<div class="nvda-title" id="nvda-ask-title">Accessibilit&#224; NVDA</div>
+		<div class="nvda-sub" id="nvda-ask-desc">
+			Vuoi attivare il supporto per <strong>NVDA Screen Reader</strong>?<br>
+			Abiliter&#224; navigazione da tastiera, annunci vocali e regioni ARIA per un&#39;esperienza di gioco completamente accessibile.
+		</div>
+		<div class="nvda-btn-row">
+			<button class="nvda-btn yes" id="nvda-ask-yes" onclick="nvdaAskChoice(true)">&#x2705; S&#236;, attiva</button>
+			<button class="nvda-btn no"  id="nvda-ask-no"  onclick="nvdaAskChoice(false)">&#x2715; No, grazie</button>
+		</div>
+	</div>
+</div>
+
+<!-- NVDA STEP 2: CONFIRM (solo se YES) -->
+<div class="overlay" id="ov-nvda-confirm" role="dialog" aria-modal="true" aria-labelledby="nvda-confirm-title" aria-describedby="nvda-confirm-desc">
+	<div class="nvda-panel">
+		<div class="nvda-confirm-icon" aria-hidden="true">&#128266;</div>
+		<div class="nvda-confirm-title" id="nvda-confirm-title">Conferma Attivazione</div>
+		<div class="nvda-confirm-sub" id="nvda-confirm-desc">
+			Stai per attivare la modalit&#224; <em>Accessibilit&#224; NVDA</em>.<br>
+			Saranno abilitati annunci vocali, navigazione con tasti freccia e focus trap nei menu.<br>
+			Sei sicuro?
+		</div>
+		<div class="nvda-btn-row">
+			<button class="nvda-btn yes" onclick="nvdaConfirm(true)">&#x2705; Conferma</button>
+			<button class="nvda-btn no"  onclick="nvdaConfirm(false)">&#x2190; Indietro</button>
+		</div>
+		<div class="nvda-back-link" onclick="nvdaConfirm(false)" role="button" tabindex="0">torna alla scelta precedente</div>
+	</div>
+</div>
+
+<!-- NVDA ARIA LIVE REGIONS (sempre nel DOM) -->
+<div id="nvda-live-polite"    role="status" aria-live="polite"   aria-atomic="true" class="visually-hidden"></div>
+<div id="nvda-live-assertive" role="alert"  aria-live="assertive" aria-atomic="true" class="visually-hidden"></div>
+
+<!-- ═══════════════════════════════════════════════════
+		 LOCKER (ARMADIETTO)
+════════════════════════════════════════════════════ -->
+<div class="scr" id="locker">
+	<div class="locker-header">
+		<div class="locker-title">🎒 Armadietto</div>
+		<button class="btn-back" onclick="closeLocker()">← Indietro</button>
+	</div>
+	<div class="locker-body">
+
+		<!-- Titles section with progress -->
+		<div class="locker-section">
+			<div class="locker-section-title">🏷️ Targhette</div>
+			<div class="locker-section-sub">Guadagna vittorie per sbloccare i titoli di rank. SSL sblocca automaticamente tutti i titoli inferiori.</div>
+			<div id="locker-titles-grid" class="titles-grid"></div>
+		</div>
+
+		<!-- Rank title progress -->
+		<div class="locker-section">
+			<div class="locker-section-title">🎯 Progresso Titoli (10 Vittorie)</div>
+			<div class="locker-section-sub">Ogni titolo richiede 10 vittorie nel rank corrispondente per essere sbloccato.</div>
+			<div id="locker-progress-list"></div>
+		</div>
+
+		<!-- Borders section -->
+		<div class="locker-section">
+			<div class="locker-section-title">✨ Cornici Avatar</div>
+			<div class="locker-section-sub">Personalizza il bordo del tuo avatar.</div>
+			<div class="border-grid" id="locker-borders"></div>
+		</div>
+
+		<!-- Card backs section -->
+		<div class="locker-section">
+			<div class="locker-section-title">🃏 Stile Carte</div>
+			<div class="locker-section-sub">Scegli il retro delle tue carte.</div>
+			<div class="cardback-grid" id="locker-cardbacks"></div>
+		</div>
+
+		<!-- Accessibility / Colorblind -->
+		<div class="locker-section">
+			<div class="locker-section-title">♿ Accessibilità</div>
+			<div class="locker-section-sub">Modalità per daltonici: aggiunge lettere identificative (R/B/G/Y) e pattern di sfondo unici a ogni colore di carta, conformemente agli standard ColorADD.</div>
+			<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+				<div>
+					<div style="font-size:13px;font-weight:700">Modalità Daltonico</div>
+					<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Pattern + Lettera su ogni carta</div>
+				</div>
+				<div class="cb-toggle-wrap" id="cb-toggle-wrap" onclick="toggleColorblind()">
+					<div class="cb-toggle-track" id="cb-track">
+						<div class="cb-toggle-thumb" id="cb-thumb"></div>
+					</div>
+					<span class="cb-toggle-label" id="cb-label">OFF</span>
+				</div>
+			</div>
+			<!-- Preview -->
+			<div style="display:flex;gap:8px;margin-top:12px;justify-content:center" id="cb-preview">
+				<div class="card card-r" style="width:46px;height:68px;border-radius:7px;flex-shrink:0">
+					<div class="cface"><div class="cval" style="font-size:20px">7</div></div>
+					<div class="card-col-letter">R</div>
+				</div>
+				<div class="card card-b" style="width:46px;height:68px;border-radius:7px;flex-shrink:0">
+					<div class="cface"><div class="cval" style="font-size:20px">7</div></div>
+					<div class="card-col-letter">B</div>
+				</div>
+				<div class="card card-g" style="width:46px;height:68px;border-radius:7px;flex-shrink:0">
+					<div class="cface"><div class="cval" style="font-size:20px">7</div></div>
+					<div class="card-col-letter">G</div>
+				</div>
+				<div class="card card-y" style="width:46px;height:68px;border-radius:7px;flex-shrink:0">
+					<div class="cface"><div class="cval" style="font-size:20px">7</div></div>
+					<div class="card-col-letter">Y</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Avatar section -->
+		<div class="locker-section">
+			<div class="locker-section-title">🎨 Avatar Personalizzabile</div>
+			<div class="locker-section-sub">Emoji, bordo e cornice animata. Gli item con 🔒 si sbloccano esclusivamente tramite Battle Pass.</div>
+			<div id="avatar-editor-root"></div>
+		</div>
+
+		<!-- Effects section -->
+		<div class="locker-section">
+			<div class="locker-section-title">⚡ Effetti Visivi</div>
+			<div class="locker-section-sub">Animazione speciale quando giochi una carta vincente.</div>
+			<div class="effect-grid" id="locker-effects"></div>
+		</div>
+
+	</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+		 SPLASH
+════════════════════════════════════════════════════ -->
+<div class="scr" id="splash" role="region" aria-label="Menu principale">
+	<div class="splash-ambient"></div>
+
+	<!-- ══ ROCKET-LEAGUE STYLE LAYOUT ══ -->
+	<div class="rl-layout">
+
+		<!-- ── LEFT SIDEBAR ───────────────────────────── -->
+		<div class="rl-sidebar" id="rl-sidebar">
+
+			<!-- Logo -->
+			<div class="rl-logo">
+				UNO
+				<span class="rl-logo-badge">ULTRA</span>
+			</div>
+
+			<!-- Profile card -->
+			<div class="rl-profile-card" onclick="switchNav('profile',this)">
+				<div class="rl-pf-av" id="pw-avatar">🎮
+					<div class="pw-avatar-badge" id="pw-av-badge">🥉</div>
+				</div>
+				<div class="rl-pf-info">
+					<div class="rl-pf-name pw-name-row">
+						<span id="pw-name">Giocatore</span>
+						<span class="cloud-sync-badge" id="cloud-badge" onclick="event.stopPropagation();manualCloudSync()" title="Cloud sync"><div class="csb-dot"></div>☁️</span>
+					</div>
+					<div id="pw-title-display" class="pw-title">— nessuna targhetta —</div>
+					<div id="pw-rank-chip" class="pw-rank-chip" style="margin-top:4px">Bronze I</div>
+				</div>
+			</div>
+
+			<!-- XP bar -->
+			<div class="rl-xp-strip">
+				<div class="xpbar-labels"><span id="pw-xp-cur">0 XP</span><span id="pw-xp-nxt">100 XP</span></div>
+				<div class="xpbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progresso XP: 0%"><div class="xpbar-fill" id="pw-xp-fill" style="width:0%"></div></div>
+				<div id="pw-mmr-txt" style="font-size:9px;color:rgba(255,255,255,.3);margin-top:5px;letter-spacing:.3px;font-family:'DM Mono',monospace">MMR: 200 • Lv.1</div>
+			</div>
+
+			<!-- Nav items — FIX A11Y #1: role=button, tabindex, keydown, aria-label, aria-current -->
+			<nav class="rl-nav" aria-label="Navigazione principale">
+				<div class="rl-nav-section" aria-hidden="true">Principale</div>
+				<div class="rl-nav-item active" id="nav-play"      role="button" tabindex="0" aria-label="Gioca" aria-current="page" onclick="switchNav('play',this)"      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🎮</span><span class="rni-label">Gioca</span></div>
+				<div class="rl-nav-item" id="nav-profile"          role="button" tabindex="0" aria-label="Profilo"      onclick="switchNav('profile',this)"     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">👤</span><span class="rni-label">Profilo</span></div>
+				<div class="rl-nav-item" id="nav-challenges"       role="button" tabindex="0" aria-label="Sfide"        onclick="switchNav('challenges',this)"  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🎯</span><span class="rni-label">Sfide</span></div>
+				<div class="rl-nav-section" aria-hidden="true">Carriera</div>
+				<div class="rl-nav-item" id="nav-pass"             role="button" tabindex="0" aria-label="Season Pass"  onclick="switchNav('pass',this)"        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🌟</span><span class="rni-label">Season Pass</span></div>
+				<div class="rl-nav-item" id="nav-titles"           role="button" tabindex="0" aria-label="Targhette"    onclick="switchNav('titles',this)"      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🏷️</span><span class="rni-label">Targhette</span></div>
+				<div class="rl-nav-item" id="nav-mmr"              role="button" tabindex="0" aria-label="MMR"          onclick="switchNav('mmr',this)"         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">⚡</span><span class="rni-label">MMR</span></div>
+				<div class="rl-nav-section" aria-hidden="true">Competizione</div>
+				<div class="rl-nav-item" id="nav-history"          role="button" tabindex="0" aria-label="Storico"      onclick="switchNav('history',this)"     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">📋</span><span class="rni-label">Storico</span></div>
+				<div class="rl-nav-item" id="nav-leaderboard"      role="button" tabindex="0" aria-label="Top 100"      onclick="switchNav('leaderboard',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🏆</span><span class="rni-label">Top 100</span></div>
+				<div class="rl-nav-section" aria-hidden="true">Sociale</div>
+				<div class="rl-nav-item" id="nav-season"           role="button" tabindex="0" aria-label="Stagione"     onclick="switchNav('season',this)"      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🗓️</span><span class="rni-label">Stagione</span></div>
+				<div class="rl-nav-item" id="nav-locker"           role="button" tabindex="0" aria-label="Armadietto"   onclick="openLocker()"                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🎒</span><span class="rni-label">Armadietto</span></div>
+				<div class="rl-nav-item" id="nav-lab"              role="button" tabindex="0" aria-label="The Lab"      onclick="openLab()"                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">🔬</span><span class="rni-label">The Lab</span></div>
+				<div class="rl-nav-section" aria-hidden="true">Extra</div>
+				<div class="rl-nav-item" id="nav-bonds"            role="button" tabindex="0" aria-label="Affinità Bot" onclick="switchNav('bonds',this)"       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">💖</span><span class="rni-label">Affinità</span></div>
+				<div class="rl-nav-item" id="nav-stats"            role="button" tabindex="0" aria-label="Statistiche"  onclick="switchNav('stats',this)"        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="rni-icon" aria-hidden="true">📊</span><span class="rni-label">Statistiche</span></div>
+			</nav>
+
+			<!-- Bottom stats strip -->
+			<div class="rl-stats-strip">
+				<div class="rl-stat-pill"><strong id="pw-wins">0</strong><span>VIT</span></div>
+				<div class="rl-stat-pill"><strong id="pw-losses">0</strong><span>SCO</span></div>
+				<div class="rl-stat-pill"><strong id="pw-credits-disp">0</strong><span>🏅</span></div>
+			</div>
+
+			<div class="rl-nav-item rl-logout" role="button" tabindex="0" aria-label="Esci dall'account" onclick="showLogoutConfirm()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" style="margin:4px 8px 0;opacity:.35"><span class="rni-icon" aria-hidden="true">⬡</span><span class="rni-label">Esci</span></div>
+
+
+			<!-- FIX v43.2: Opzioni tra Esci e Importa -->
+			<div style="padding:4px 8px 2px">
+				<button onclick="openSettings()" style="width:100%;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.6);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+					<span style="font-size:14px">⚙️</span> Opzioni
+				</button>
+			</div>
+			<!-- Backup row -->
+			<div class="rl-backup-row">
+				<button onclick="exportSaveDataEnhanced()" class="rl-backup-btn rl-backup-btn-export">📦 Backup</button>
+				<button onclick="importSaveDataEnhanced()" class="rl-backup-btn rl-backup-btn-import">📂 Importa</button>
+				<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;display:flex;align-items:center;gap:6px">
+					<span>Ultimo: <span id="backup-last-time">Mai</span></span>
+					<span id="backup-warn" style="display:none;color:#F5C842;cursor:help">⚠️</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- ── MAIN CONTENT ────────────────────────────── -->
+		<div class="rl-main" id="rl-main">
+
+			<!-- ── PANEL: GIOCA ── -->
+			<div class="rl-panel active" id="rl-panel-play">
+
+				<!-- Panel header -->
+				<div class="rl-panel-header">
+					<div>
+						<div class="rl-panel-title">Gioca</div>
+						<div class="rl-panel-sub" id="home-panel-sub">Scegli modalità e configurazione</div>
+					</div>
+				</div>
+
+				<div class="rl-panel-body">
+
+					<!-- ── SEASON BANNER (compact) ── -->
+					<div class="rl-season-banner" id="season-banner-el" style="padding:10px 16px">
+						<div>
+							<div class="sb-season">🌟 Stagione 1</div>
+							<div class="sb-timer" id="sb-timer-txt">Caricamento...</div>
+						</div>
+						<div class="sb-info">Season Pass attivo</div>
+					</div>
+
+					<!-- ── MODE TABS ── -->
+					<div class="home-mode-tabs-wrap">
+						<button class="hmt-arrow" id="hmt-arrow-left" onclick="_hmtScroll(-1)" aria-label="Scorri sinistra">‹</button>
+						<div class="hmt-scroll-area at-start" id="hmt-scroll-area">
+							<!-- FIX A11Y #2: role=radiogroup + role=radio + aria-checked + tabindex + keydown -->
+							<div class="home-mode-tabs" id="home-mode-tabs" role="radiogroup" aria-label="Seleziona modalità di gioco">
+						<!-- PRINCIPALI -->
+						<div class="hmt hmt-ranked active" id="hmt-ranked" role="radio" aria-checked="true"  tabindex="0"  aria-label="Competitiva"                 onclick="homeSelectMode('ranked',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">⚔️</span> Competitiva
+						</div>
+						<div class="hmt hmt-casual" id="hmt-casual"           role="radio" aria-checked="false" tabindex="-1" aria-label="Casual"                     onclick="homeSelectMode('casual',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🎲</span> Casual
+						</div>
+						<!-- SEPARATORE SPECIALE -->
+						<div class="hmt-sep" aria-hidden="true">✦</div>
+						<!-- SPECIALI -->
+						<div class="hmt hmt-blitz hmt-special" id="hmt-blitz" role="radio" aria-checked="false" tabindex="-1" aria-label="Speed Blitz — modalità extra" onclick="homeSelectMode('blitz',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">⚡</span> Speed Blitz
+							<span class="hmt-special-badge" aria-hidden="true">EXTRA</span>
+						</div>
+						<div class="hmt hmt-chaos hmt-special" id="hmt-chaos" role="radio" aria-checked="false" tabindex="-1" aria-label="Chaos — modalità extra"       onclick="homeSelectMode('chaos',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🌪️</span> Chaos
+							<span class="hmt-special-badge" aria-hidden="true">EXTRA</span>
+						</div>
+						<!-- MINI-GAMES -->
+						<div class="hmt-sep" aria-hidden="true">◆</div>
+						<div class="hmt hmt-ruba" id="hmt-ruba"               role="radio" aria-checked="false" tabindex="-1" aria-label="Ruba Mazzetto"               onclick="homeSelectMode('ruba',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🃏</span> Ruba Mazzetto
+						</div>
+						<div class="hmt hmt-scala" id="hmt-scala"             role="radio" aria-checked="false" tabindex="-1" aria-label="Scala 40"                   onclick="homeSelectMode('scala',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🎴</span> Scala 40
+						</div>
+						<div class="hmt hmt-bj" id="hmt-bj"                   role="radio" aria-checked="false" tabindex="-1" aria-label="Black Jack"                  onclick="homeSelectMode('bj',this)"       onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🂡</span> Black Jack
+						</div>
+						<!-- GIOCHI CLASSICI ITALIANI -->
+						<div class="hmt-sep" aria-hidden="true">♠</div>
+						<div class="hmt hmt-scopa" id="hmt-scopa"             role="radio" aria-checked="false" tabindex="-1" aria-label="Scopa — gioco classico"     onclick="homeSelectMode('scopa',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🧹</span> Scopa
+							<span class="hmt-special-badge" aria-hidden="true">CLASSICO</span>
+						</div>
+						<div class="hmt hmt-poker" id="hmt-poker"             role="radio" aria-checked="false" tabindex="-1" aria-label="Poker Texas"                onclick="homeSelectMode('poker',this)"     onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">♠️</span> Poker Texas
+							<span class="hmt-special-badge" aria-hidden="true">EXTRA</span>
+						</div>
+						<div class="hmt hmt-burraco" id="hmt-burraco"         role="radio" aria-checked="false" tabindex="-1" aria-label="Burraco — gioco classico"   onclick="homeSelectMode('burraco',this)"   onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🎴</span> Burraco
+							<span class="hmt-special-badge" aria-hidden="true">CLASSICO</span>
+						</div>
+						<div class="hmt hmt-millemiglia" id="hmt-millemiglia"  role="radio" aria-checked="false" tabindex="-1" aria-label="Millemiglia"                onclick="homeSelectMode('millemiglia',this)" onkeydown="_hmtKeydown(event,this)">
+							<span class="hmt-icon" aria-hidden="true">🚗</span> Millemiglia
+							<span class="hmt-special-badge" aria-hidden="true">EXTRA</span>
+						</div>
+					</div><!-- /home-mode-tabs -->
+						</div><!-- /hmt-scroll-area -->
+						<button class="hmt-arrow" id="hmt-arrow-right" onclick="_hmtScroll(1)" aria-label="Scorri destra">›</button>
+					</div><!-- /home-mode-tabs-wrap -->
+
+					<!-- ── MODE DESCRIPTION ── -->
+					<div class="home-mode-desc" id="home-mode-desc">
+						<div class="hmd-icon" id="hmd-icon">⚔️</div>
+						<div>
+							<div class="hmd-title" id="hmd-title">Competitiva</div>
+							<div class="hmd-sub" id="hmd-sub">MMR in palio · Rank aggiornato dopo ogni partita</div>
+						</div>
+						<div class="hmd-badge" id="hmd-badge" style="background:rgba(244,63,94,.15);color:#f43f5e;border:1px solid rgba(244,63,94,.3)">RANKED</div>
+					</div>
+
+					<!-- ── PLAYER COUNT CARDS ── -->
+					<div id="home-player-grid" class="home-player-grid trio">
+						<!-- Dynamically rendered by homeRenderPlayerCards() -->
+					</div>
+
+					<!-- ── RANK INFO STRIP (hidden for ruba/scala) ── -->
+					<div id="home-rank-strip" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px 14px;flex-shrink:0">
+						<div id="home-rank-icon" style="width:28px;height:28px;display:inline-flex;flex-shrink:0"></div>
+						<div style="flex:1">
+							<div style="font-size:11px;font-weight:700;color:#fff" id="home-rank-name">Bronze I</div>
+							<div style="font-size:9px;color:rgba(255,255,255,.3)" id="home-rank-sub">200 MMR • Facile</div>
+						</div>
+						<div style="text-align:right">
+							<div style="font-size:9px;color:rgba(255,255,255,.25)">MMR ATTUALE</div>
+							<div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--teal)" id="home-mmr-val">200</div>
+						</div>
+					</div>
+
+					<!-- ── MAIN PLAY BUTTON ── -->
+					<button class="home-play-btn mode-ranked" id="home-play-btn" onclick="homeStartGame()">
+						▶ GIOCA ADESSO
+					</button>
+
+					<!-- ── QUICK ACTIONS ── -->
+					<div class="home-quick-row">
+						<button class="home-quick-btn" onclick="openTournament()" aria-label="Apri Torneo">🏆 Torneo</button>
+						<button class="home-quick-btn" onclick="openMultiplayer()" aria-label="Gioca Online">🌐 Online</button>
+						<button class="home-quick-btn" onclick="openCustomGameLobby()" aria-label="Partita Personalizzata" style="background:rgba(192,132,252,.12);border-color:rgba(192,132,252,.3);color:#c084fc">⚡ Custom</button>
+					</div>
+
+					<div class="home-sep"></div>
+
+					<!-- ── SHOP ── -->
+					<div class="rl-shop">
+						<div class="rl-shop-header">
+							<div class="rl-shop-title">Shop</div>
+							<div style="font-size:10px;color:rgba(255,255,255,.3)">🏅 <span id="pw-credits-shop">0</span> crediti</div>
+						</div>
+						<div class="rl-shop-grid">
+							<div class="shop-item" onclick="openShopItem('crate_common')">
+								<div class="shop-item-icon">📦</div>
+								<div class="shop-item-name">Cassa Comune</div>
+								<div class="shop-item-cost">🏅 150</div>
+								<div class="shop-item-desc">Titolo • Crediti • XP</div>
+							</div>
+							<div class="shop-item" onclick="openShopItem('crate_rare')">
+								<div class="shop-item-icon">💠</div>
+								<div class="shop-item-name">Cassa Rara</div>
+								<div class="shop-item-cost">🏅 350</div>
+								<div class="shop-item-desc">Titolo Raro garantito</div>
+							</div>
+							<div class="shop-item" onclick="openShopItem('dxp_token')">
+								<div class="shop-item-icon">⚡</div>
+								<div class="shop-item-name">Double XP</div>
+								<div class="shop-item-cost">🏅 80</div>
+								<div class="shop-item-desc">Prossima partita ×2 XP</div>
+							</div>
+							<div class="shop-item" onclick="openShopItem('crate_legendary')">
+								<div class="shop-item-icon">👑</div>
+								<div class="shop-item-name">Leggendaria</div>
+								<div class="shop-item-cost">🏅 800</div>
+								<div class="shop-item-desc">Titolo Leggendario garantito</div>
+							</div>
+						</div>
+						<div id="dxp-active-badge" class="dxp-active">⚡ Double XP attivo!</div>
+					</div>
+
+					<!-- hidden sel-players for legacy compat -->
+					<select id="sel-players" onchange="onPlaylistChange()" style="display:none">
+						<option value="1">1v1 Duello</option>
+						<option value="2" selected>3 Giocatori</option>
+						<option value="3">4 Giocatori</option>
+					</select>
+					<!-- hidden diff-rank-badge for legacy compat -->
+					<div id="diff-rank-badge" style="display:none">
+						<span id="drb-icon"></span>
+						<div><div id="drb-txt"></div><div id="drb-sub"></div></div>
+					</div>
+					<!-- hidden legacy hero elements -->
+					<span id="rl-hero-rank-txt" style="display:none"></span>
+					<span id="rl-hero-mmr-txt" style="display:none"></span>
+					<!-- hidden legacy MMR pill elements for updateProfile -->
+					<div style="display:none">
+						<span id="pill-1v1-mmr">200</span><span id="pill-1v1-rank">Bronze I</span>
+						<span id="pill-3p-mmr">200</span><span id="pill-3p-rank">Bronze I</span>
+						<span id="pill-4p-mmr">200</span><span id="pill-4p-rank">Bronze I</span>
+						<span id="pill-ruba-mmr">200</span><span id="pill-ruba-rank">Bronze I</span>
+						<span id="pill-scala-mmr">200</span><span id="pill-scala-rank">Bronze I</span>
+						<span id="pill-bj1-mmr">200</span><span id="pill-bj1-rank">Bronze I</span>
+						<span id="pill-bj2-mmr">200</span><span id="pill-bj2-rank">Bronze I</span>
+						<span id="pill-bj3-mmr">200</span><span id="pill-bj3-rank">Bronze I</span>
+						<span id="pill-2v2-mmr">200</span><span id="pill-2v2-rank">Bronze I</span>
+						<span id="pill-3v3-mmr">200</span><span id="pill-3v3-rank">Bronze I</span>
+					</div>
+
+				</div><!-- /rl-panel-body -->
+			</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+/* game.css: stili estratti dal <style> originale relativi a tavolo, carte, HUD, overlay, animazioni principali. */
+
+/* Esempio: */
+.table-bg { box-shadow: 0 4px 24px #0008; border-radius: 18px; }
+.card { box-shadow: 0 4px 12px #000a; border: 1px solid rgba(255,255,255,0.2); }
+/* ...continua con tutti gli stili di gioco estratti... */

@@ -1,0 +1,18 @@
+/* common.css: variabili root, reset, utility, helper class, stili globali estratti dal <style> originale. */
+
+:root {
+  --bg: #060610;
+  --felt: #061a10;
+  --felt2: #091f14;
+  --gold: #F5C842;
+  --teal: #22D3EE;
+  --crimson: #F43F5E;
+  --emerald: #34D399;
+  --card-w: 70px;
+  --card-h: 105px;
+  /* ...altre variabili... */
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: #fff; }
+/* ...continua con reset, utility, helper... */

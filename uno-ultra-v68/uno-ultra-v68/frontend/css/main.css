@@ -1,0 +1,18 @@
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #060610;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+}
+.screen {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0; left: 0;
+  background: transparent;
+}
+.screen.on {
+  display: flex;
+}

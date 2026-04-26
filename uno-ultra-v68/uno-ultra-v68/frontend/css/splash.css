@@ -1,0 +1,60 @@
+/* Splash Screen Styles */
+.logoPulse {
+  font-family: 'Syne', sans-serif;
+  font-size: 40px;
+  color: #F5C842;
+  text-align: center;
+  margin-top: 60px;
+  animation: logoPulse 2s infinite;
+}
+@keyframes logoPulse {
+  0%,100% { text-shadow: 0 0 20px rgba(245,200,66,.5); }
+  50% { text-shadow: 0 0 40px rgba(245,200,66,.9); }
+}
+#splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: radial-gradient(circle at 50% 40%, #1a2840 0%, #0D1B2A 100%);
+}
+#profile-widget {
+  margin: 24px 0;
+}
+#login-btn, #register-btn {
+  margin: 8px;
+  padding: 12px 32px;
+  border-radius: 24px;
+  border: none;
+  font-size: 18px;
+  font-family: 'Syne', sans-serif;
+  background: linear-gradient(90deg,#fbbf24,#c084fc);
+  color: #222;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+}
+#login-btn:hover, #register-btn:hover {
+  background: linear-gradient(90deg,#c084fc,#fbbf24);
+}
+#loader-bar {
+  width: 200px;
+  height: 8px;
+  background: #222;
+  border-radius: 8px;
+  margin-top: 32px;
+  overflow: hidden;
+  position: relative;
+}
+#loader-bar::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg,#22D3EE,#F5C842);
+  animation: loaderBarAnim 2s linear forwards;
+}
+@keyframes loaderBarAnim {
+  to { width: 100%; }
+}

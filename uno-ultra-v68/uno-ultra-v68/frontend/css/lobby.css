@@ -1,0 +1,6 @@
+/* lobby.css: stili per schermate lobby, torneo, leaderboard, matchmaking, ecc. estratti dal <style> originale. */
+
+/* Esempio: */
+.lb-mtab { font-family:Syne,sans-serif; font-size:11px; font-weight:800; letter-spacing:.2px; border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:rgba(255,255,255,.45); transition:all .2s; text-align:center; white-space:nowrap; }
+.lb-mtab.active { background:linear-gradient(135deg,rgba(245,200,66,.22),rgba(245,200,66,.07)); border-color:rgba(245,200,66,.5); color:var(--gold); box-shadow:0 2px 12px rgba(245,200,66,.15); }
+/* ...continua con tutti gli stili lobby/torneo estratti... */

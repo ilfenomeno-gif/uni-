@@ -1,0 +1,7 @@
+/* overlays.css: stili per overlay, modali, notifiche, badge, dialoghi di accessibilità, ecc. estratti dal <style> originale. */
+
+/* Esempio: */
+.overlay { position:fixed; inset:0; z-index:5000; display:none; align-items:center; justify-content:center; }
+.overlay.on { display:flex; }
+#ov-nvda-ask, #ov-nvda-confirm { background:rgba(0,0,0,.85); backdrop-filter:blur(24px); }
+/* ...continua con tutti gli stili overlay/modali estratti... */
